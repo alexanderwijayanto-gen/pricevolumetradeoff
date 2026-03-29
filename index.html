@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulator Harga & Volume - Zenith Style</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        zinc: {
+                            850: '#1f1f22',
+                            900: '#18181b',
+                            950: '#09090b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #09090b;
+            color: #e4e4e7;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+
+        /* Custom Range Slider */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #6366f1; cursor: pointer; margin-top: -6px; box-shadow: 0 0 10px rgba(99, 102, 241, 0.5); transition: all 0.2s ease; }
+        input[type=range]::-webkit-slider-thumb:hover { background: #818cf8; transform: scale(1.1); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #27272a; border-radius: 2px; }
+        input[type=range]:focus { outline: none; }
+
+        /* Hide Number Input Arrows */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+
+        .bg-noise {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* Tabs Scroll Hide */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="min-h-screen selection:bg-indigo-500/30 p-4 md:p-8 relative">
+
+    <!-- Background Effects -->
+    <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-900/20 blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-900/10 blur-[120px]"></div>
+        <div class="absolute inset-0 bg-noise opacity-[0.03] mix-blend-overlay"></div>
+    </div>
+
+    <div class="max-w-6xl mx-auto relative z-10 space-y-6">
+        
+        <!-- Header & Info Banner -->
+        <div class="space-y-6 border-b border-zinc-800/60 pb-8">
+            <header class="text-left flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white mb-2">
+                        Simulator Harga & Volume: <span class="text-emerald-500">Brand ABC (Indonesia)</span>
+                    </h1>
+                    <p class="text-zinc-400 max-w-xl text-sm md:text-base">
+                        Model Interaktif "Price-Volume Trade-Off" (Multi-Responden)
+                    </p>
+                </div>
+                
+                <div class="flex flex-row items-center gap-3 w-full lg:w-auto">
+                    <!-- Base FGP / HA -->
+                    <div class="flex-1 lg:flex-none bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex flex-col gap-1 min-w-[160px] transition-colors focus-within:border-emerald-500/50 focus-within:bg-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.05)]">
+                        <label class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Base FGP / HA</label>
+                        <div class="flex items-center gap-2">
+                            <span class="text-emerald-500 font-bold">Rp</span>
+                            <input type="number" id="basePrice" value="136000" class="w-full bg-transparent text-white font-bold text-xl focus:outline-none placeholder-emerald-700/50" />
+                        </div>
+                    </div>
+
+                    <!-- COGS / HA -->
+                    <div class="flex-1 lg:flex-none bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3 flex flex-col gap-1 min-w-[160px] transition-colors focus-within:border-indigo-500/50 focus-within:bg-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.05)]">
+                        <label class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">COGS / HA</label>
+                        <div class="flex items-center gap-2">
+                            <span class="text-indigo-500 font-bold">Rp</span>
+                            <input type="number" id="unitCost" value="32640" class="w-full bg-transparent text-white font-bold text-xl focus:outline-none placeholder-indigo-700/50" />
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Info Banner -->
+            <div class="p-4 md:p-5 rounded-2xl bg-indigo-950/20 border border-indigo-500/20 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 shadow-lg shadow-indigo-500/5">
+                <div class="flex items-center gap-3 text-indigo-400 w-full lg:w-auto border-b lg:border-none border-indigo-500/20 pb-4 lg:pb-0">
+                    <div class="p-2 bg-indigo-500/10 rounded-full border border-indigo-500/20">
+                        <i data-lucide="info" class="w-4 h-4"></i>
+                    </div>
+                    <span class="font-medium text-sm whitespace-nowrap">Informasi Parameter (Base)</span>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 w-full text-left">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">COGS IND/L</span>
+                        <span class="text-sm font-semibold text-zinc-200">Rp 130.560</span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Dosage Value (Dosis)</span>
+                        <span class="text-sm font-semibold text-zinc-200">0,25 L/Ha</span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">COGS IND/HA</span>
+                        <span class="text-sm font-semibold text-zinc-200"><span id="infoCogsHa">Rp 32.640</span> <span class="text-[10px] text-zinc-500 font-normal block mt-0.5">(didapat dari 130.560 × 0,25)</span></span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">GP% (Gross Profit Margin)</span>
+                        <span class="text-sm font-semibold text-emerald-400" id="infoGpMargin">0,76 (76%)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOP PANEL: Skenario Volume (Input) Matrix -->
+        <div class="p-6 md:p-8 rounded-3xl bg-[#121214] border border-white/5 shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500"></div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <i data-lucide="table-properties" class="w-5 h-5 text-indigo-400"></i>
+                    Skenario Volume (Input)
+                </h2>
+                <button onclick="resetData()" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-600 rounded-lg text-sm font-medium text-zinc-300 transition-all shadow-sm flex items-center gap-2">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reset Semua Data
+                </button>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="relative mb-6">
+                <div class="flex items-center">
+                    <button onclick="scrollTabs(-1)" class="p-2 text-zinc-500 hover:text-white bg-zinc-900/50 hover:bg-zinc-800 rounded-l-lg border border-zinc-800/80 transition-colors">
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                    </button>
+                    <div id="tabsContainer" class="flex flex-1 gap-1 overflow-x-auto no-scrollbar px-1 py-1 bg-zinc-900/30 border-y border-zinc-800/80">
+                        <!-- Tabs injected via JS -->
+                    </div>
+                    <button onclick="scrollTabs(1)" class="p-2 text-zinc-500 hover:text-white bg-zinc-900/50 hover:bg-zinc-800 rounded-r-lg border border-zinc-800/80 transition-colors">
+                        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <p class="text-xs text-zinc-500 mt-3" id="tabDescription">
+                    Menampilkan <strong class="text-zinc-300">Rata-rata Agregat</strong> dari ke-10 responden. (Read-only)
+                </p>
+            </div>
+
+            <!-- Matrix Table -->
+            <div class="overflow-x-auto border border-zinc-800/60 rounded-xl bg-[#09090b]/50">
+                <table class="w-full text-left border-collapse min-w-[600px]">
+                    <thead>
+                        <tr class="bg-zinc-900/50">
+                            <th class="py-4 px-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-800">Perubahan</th>
+                            <th class="py-4 px-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-800">Harga (Rp)</th>
+                            <th class="py-4 px-4 text-xs font-semibold text-emerald-400 uppercase tracking-wider border-b border-zinc-800">Tanpa Reaksi (L)</th>
+                            <th class="py-4 px-4 text-xs font-semibold text-blue-400 uppercase tracking-wider border-b border-zinc-800">Dgn Reaksi (L)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scenarioTableBody">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SIMULATOR PANEL -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left Column: Settings -->
+            <div class="lg:col-span-4 space-y-6">
+                <!-- Simulation Slider Card -->
+                <div class="p-6 rounded-3xl bg-[#121214] border border-indigo-500/20 shadow-[0_0_30px_rgba(99,102,241,0.05)] relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                    
+                    <h2 class="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                        <i data-lucide="sliders-horizontal" class="w-4 h-4 text-indigo-400"></i>
+                        Simulasi Kustom
+                    </h2>
+                    
+                    <div class="space-y-6">
+                        <div class="flex flex-col gap-3 w-full">
+                            <div class="flex justify-between items-center">
+                                <label class="text-sm font-medium text-zinc-400">Uji Perubahan Harga</label>
+                                <div id="priceChangeBadge" class="px-2 py-1 rounded-md text-xs font-bold border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">+0.0%</div>
+                            </div>
+                            <input type="range" id="priceChangePct" min="-25" max="25" step="1" value="0" />
+                            <div class="flex justify-between text-[10px] font-medium text-zinc-600 px-1"><span>-25%</span><span>0%</span><span>+25%</span></div>
+                        </div>
+
+                        <div class="flex flex-col gap-3 w-full">
+                            <div class="flex justify-between items-center">
+                                <label class="text-sm font-medium text-zinc-400">Uji Perubahan Volume</label>
+                                <div id="volumeChangeBadge" class="px-2 py-1 rounded-md text-xs font-bold border bg-rose-500/10 text-rose-400 border-rose-500/20">-0.0%</div>
+                            </div>
+                            <input type="range" id="volumeChangePct" min="-50" max="50" step="1" value="0" />
+                            <div class="flex justify-between text-[10px] font-medium text-zinc-600 px-1"><span>-50%</span><span>0%</span><span>+50%</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Results Dashboard -->
+            <div class="lg:col-span-8 space-y-6">
+                
+                <!-- Main Impact Card -->
+                <div id="impactBanner" class="p-6 md:p-8 rounded-3xl border relative overflow-hidden transition-all duration-500 bg-zinc-900/50 border-zinc-800/80">
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div>
+                            <h2 class="text-zinc-400 text-sm font-medium mb-1">Dampak Laba Kotor vs Base (Agregat 0%)</h2>
+                            <div class="flex items-center gap-3">
+                                <span id="profitImpactText" class="text-4xl md:text-5xl font-bold tracking-tight text-zinc-300">
+                                    Rp 0
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-4 bg-[#09090b]/50 p-4 rounded-2xl border border-white/5 backdrop-blur-md w-full md:w-auto">
+                            <div class="text-center">
+                                <div class="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mb-1">Laba Baru</div>
+                                <div class="text-xl font-bold text-white" id="newProfitTextBanner">Rp 0</div>
+                            </div>
+                            <div class="w-px bg-zinc-800 my-1"></div>
+                            <div class="text-center">
+                                <div class="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mb-1">Margin</div>
+                                <div class="text-xl font-bold text-indigo-400" id="newMarginText">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid Metrics -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-5 rounded-2xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md relative overflow-hidden group hover:border-zinc-700 transition-colors">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-sm font-medium text-zinc-400">Pendapatan Baru</h3>
+                            <div id="revImpactBadge" class="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md border bg-zinc-800 text-zinc-300 border-zinc-700">
+                                <span id="revImpactText">Rp 0</span>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-semibold text-zinc-100 tracking-tight" id="newRevText">Rp 0</div>
+                        <div class="text-xs text-zinc-500 mt-2">Base Agregat: <span id="baseRevText">Rp 0</span></div>
+                    </div>
+
+                    <div class="p-5 rounded-2xl bg-zinc-900/40 border border-zinc-800/80 backdrop-blur-md relative overflow-hidden group hover:border-zinc-700 transition-colors">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-sm font-medium text-zinc-400">Total Biaya (HPP) Baru</h3>
+                            <div id="cogsImpactBadge" class="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md border bg-zinc-800 text-zinc-300 border-zinc-700">
+                                <span id="cogsImpactText">Rp 0</span>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-semibold text-zinc-100 tracking-tight" id="newCogsText">Rp 0</div>
+                        <div class="text-xs text-zinc-500 mt-2">Base Agregat: <span id="baseCogsText">Rp 0</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW CHARTS SECTION -->
+        <div class="space-y-6 pt-6 border-t border-zinc-800/50">
+            <!-- Full Width Volume Chart -->
+            <div class="p-6 md:p-8 rounded-3xl bg-[#121214] border border-white/5 shadow-2xl relative overflow-hidden">
+                <h3 class="text-xl font-bold text-white mb-6">Trade-Off: Harga vs Volume (Agregat)</h3>
+                <div class="w-full h-[300px] md:h-[400px] relative">
+                    <canvas id="chartVolume"></canvas>
+                </div>
+            </div>
+
+            <!-- Two Column Charts -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Revenue Chart -->
+                <div class="p-6 md:p-8 rounded-3xl bg-[#121214] border border-white/5 shadow-2xl relative overflow-hidden">
+                    <h3 class="text-lg font-bold text-white mb-6">Dampak Pendapatan (Agregat)</h3>
+                    <div class="w-full h-[250px] relative">
+                        <canvas id="chartRevenue"></canvas>
+                    </div>
+                </div>
+
+                <!-- Profit Chart -->
+                <div class="p-6 md:p-8 rounded-3xl bg-[#121214] border border-white/5 shadow-2xl relative overflow-hidden">
+                    <h3 class="text-lg font-bold text-white mb-6">Dampak Laba Kotor (Agregat)</h3>
+                    <div class="w-full h-[250px] relative">
+                        <canvas id="chartProfit"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW ANALYSIS TABLE SECTION -->
+        <div class="p-6 md:p-8 rounded-3xl bg-[#121214] border border-white/5 shadow-2xl relative overflow-hidden">
+            <h3 class="text-xl font-bold text-white mb-2">Analisis Skenario: Best Case vs Worst Case</h3>
+            <p class="text-xs text-zinc-400 mb-6">
+                Menampilkan persentase perubahan (Δ) dibandingkan skenario basis (Base). Untuk kenaikan harga, Best Case = Dengan Reaksi, Worst Case = Tanpa Reaksi.
+            </p>
+            
+            <div class="overflow-x-auto border border-zinc-800/60 rounded-xl bg-[#09090b]/50">
+                <table class="w-full text-center border-collapse min-w-[800px]">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="py-4 px-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider border-b border-r border-zinc-800 align-middle">
+                                Perubahan Harga
+                            </th>
+                            <th colspan="3" class="py-3 px-4 text-xs font-bold text-emerald-500 uppercase tracking-wider border-b border-r border-zinc-800 bg-emerald-500/5">
+                                WORST CASE (TANPA REAKSI)
+                            </th>
+                            <th colspan="3" class="py-3 px-4 text-xs font-bold text-blue-500 uppercase tracking-wider border-b border-zinc-800 bg-blue-500/5">
+                                BEST CASE (DENGAN REAKSI)
+                            </th>
+                        </tr>
+                        <tr class="bg-zinc-900/30">
+                            <!-- Worst Case Columns -->
+                            <th class="py-3 px-2 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-r border-zinc-800">Δ Volume</th>
+                            <th class="py-3 px-2 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-r border-zinc-800">Δ Pendapatan</th>
+                            <th class="py-3 px-2 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-r border-zinc-800">Δ Laba Kotor</th>
+                            
+                            <!-- Best Case Columns -->
+                            <th class="py-3 px-2 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-r border-zinc-800">Δ Volume</th>
+                            <th class="py-3 px-2 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-r border-zinc-800">Δ Pendapatan</th>
+                            <th class="py-3 px-2 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-800">Δ Laba Kotor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analysisTableBody">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <footer class="mt-8 text-center text-xs text-zinc-600 pb-8 pt-8">
+            Desain matriks terinspirasi dari Zenith Cloud UI & Price-Volume Trade-off Analysis.
+        </footer>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        lucide.createIcons();
+
+        // Chart instances
+        let chartVolInstance = null;
+        let chartRevInstance = null;
+        let chartProfInstance = null;
+
+        // Constants & Initial Data Setup
+        const tiers = [-15, -10, -5, -3, 0, 3, 5, 10, 15];
+        const respondents = Array.from({length: 10}, (_, i) => `R${i + 1}`);
+        
+        // Default Data
+        const defaultAgregat = {
+            '-15': { tanpa: 458500, dengan: 436500 },
+            '-10': { tanpa: 448500, dengan: 427685 },
+            '-5':  { tanpa: 436000, dengan: 418736 },
+            '-3':  { tanpa: 429500, dengan: 413811 },
+            '0':   { tanpa: 400000, dengan: 400000 },
+            '3':   { tanpa: 380000, dengan: 387136 },
+            '5':   { tanpa: 358000, dengan: 379681 },
+            '10':  { tanpa: 333000, dengan: 360220 },
+            '15':  { tanpa: 308000, dengan: 341200 },
+        };
+
+        let scenarioData = {};
+        let activeTab = 'Agregat';
+
+        // Formatters
+        const formatCurrency = val => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val);
+        const formatNumber = val => new Intl.NumberFormat('id-ID').format(Math.round(val));
+        const formatPct = val => (val > 0 ? `+${val.toFixed(1)}%` : `${val.toFixed(1)}%`);
+        
+        // Generate styled HTML string for Delta Table cell
+        const getDeltaHtml = val => {
+            if (val > 0) return `<span class="text-emerald-500 font-bold">+${val.toFixed(1)}%</span>`;
+            if (val < 0) return `<span class="text-rose-500 font-bold">${val.toFixed(1)}%</span>`;
+            return `<span class="text-zinc-500 font-medium">0.0%</span>`;
+        };
+
+        // Initialize Data
+        function initData() {
+            scenarioData = {};
+            respondents.forEach(r => {
+                scenarioData[r] = {};
+                tiers.forEach(t => {
+                    scenarioData[r][t] = {
+                        tanpa: defaultAgregat[t].tanpa / 10,
+                        dengan: defaultAgregat[t].dengan / 10
+                    };
+                });
+            });
+        }
+
+        function resetData() {
+            initData();
+            document.getElementById('basePrice').value = 136000;
+            document.getElementById('unitCost').value = 32640;
+            document.getElementById('priceChangePct').value = 0;
+            document.getElementById('volumeChangePct').value = 0;
+            renderTabs();
+            renderTable();
+            calculateSimulator();
+        }
+
+        // Tab Navigation Logic
+        function scrollTabs(direction) {
+            const container = document.getElementById('tabsContainer');
+            container.scrollBy({ left: direction * 150, behavior: 'smooth' });
+        }
+
+        function setActiveTab(tabName) {
+            activeTab = tabName;
+            const desc = document.getElementById('tabDescription');
+            if (tabName === 'Agregat') {
+                desc.innerHTML = `Menampilkan <strong class="text-zinc-300">Total Agregat</strong> dari ke-10 responden. (Read-only)`;
+            } else {
+                desc.innerHTML = `Mengedit data simulasi untuk <strong class="text-zinc-300">Responden ${tabName}</strong>.`;
+            }
+            renderTabs();
+            renderTable();
+        }
+
+        function renderTabs() {
+            const container = document.getElementById('tabsContainer');
+            const allTabs = ['Agregat', ...respondents];
+            
+            container.innerHTML = allTabs.map(tab => {
+                const isActive = activeTab === tab;
+                const isAgregat = tab === 'Agregat';
+                const baseClasses = `px-4 py-2 text-sm font-medium whitespace-nowrap rounded-md transition-all flex items-center gap-2 cursor-pointer`;
+                const activeClasses = `bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-sm`;
+                const inactiveClasses = `text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 border border-transparent`;
+                const icon = isAgregat ? `<i data-lucide="bar-chart-2" class="w-4 h-4"></i>` : '';
+                
+                return `
+                    <button onclick="setActiveTab('${tab}')" class="${baseClasses} ${isActive ? activeClasses : inactiveClasses}">
+                        ${icon} ${tab}
+                    </button>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        // Table Matrix Logic
+        function updateVolumeData(tier, type, value) {
+            if (activeTab === 'Agregat') return; 
+            scenarioData[activeTab][tier][type] = Number(value) || 0;
+            calculateSimulator(); 
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('scenarioTableBody');
+            const basePrice = Number(document.getElementById('basePrice').value) || 0;
+            const isAgregat = activeTab === 'Agregat';
+
+            tbody.innerHTML = tiers.map(tier => {
+                const priceStr = (tier === 0) ? `0% (Base)` : (tier > 0 ? `+${tier}%` : `${tier}%`);
+                const calculatedPrice = basePrice * (1 + tier/100);
+                const isBaseRow = tier === 0;
+
+                let valTanpa = 0, valDengan = 0;
+                if (isAgregat) {
+                    respondents.forEach(r => {
+                        valTanpa += scenarioData[r][tier].tanpa;
+                        valDengan += scenarioData[r][tier].dengan;
+                    });
+                } else {
+                    valTanpa = scenarioData[activeTab][tier].tanpa;
+                    valDengan = scenarioData[activeTab][tier].dengan;
+                }
+
+                const rowClasses = isBaseRow 
+                    ? 'bg-zinc-800/40 border-y border-zinc-700/50 hover:bg-zinc-800/60 transition-colors' 
+                    : 'border-b border-zinc-800/50 hover:bg-white/[0.02] transition-colors';
+                
+                const textStyle = isBaseRow ? 'font-bold text-zinc-100' : 'text-zinc-400';
+
+                const inputTanpa = isAgregat 
+                    ? `<span class="px-3 py-1.5 font-mono text-emerald-400/80">${formatNumber(valTanpa)}</span>`
+                    : `<input type="number" value="${valTanpa}" onchange="updateVolumeData(${tier}, 'tanpa', this.value)" class="w-full max-w-[140px] bg-[#09090b] border border-zinc-800 rounded-md px-3 py-1.5 text-zinc-200 text-sm focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 outline-none transition-all font-mono" />`;
+                
+                const inputDengan = isAgregat 
+                    ? `<span class="px-3 py-1.5 font-mono text-blue-400/80">${formatNumber(valDengan)}</span>`
+                    : `<input type="number" value="${valDengan}" onchange="updateVolumeData(${tier}, 'dengan', this.value)" class="w-full max-w-[140px] bg-[#09090b] border border-zinc-800 rounded-md px-3 py-1.5 text-zinc-200 text-sm focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all font-mono" />`;
+
+                return `
+                    <tr class="${rowClasses}">
+                        <td class="py-3 px-4 ${textStyle}">${priceStr}</td>
+                        <td class="py-3 px-4 font-mono ${textStyle}">${formatCurrency(calculatedPrice).replace('Rp', '')}</td>
+                        <td class="py-3 px-4">${inputTanpa}</td>
+                        <td class="py-3 px-4">${inputDengan}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateBadgeStyle(el, value, isReverseGood = false) {
+            el.className = 'px-2 py-1 rounded-md text-xs font-bold border ';
+            if ((value > 0 && !isReverseGood) || (value < 0 && isReverseGood)) {
+                el.className += 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+            } else if ((value < 0 && !isReverseGood) || (value > 0 && isReverseGood)) {
+                el.className += 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+            } else {
+                el.className += 'bg-zinc-800 text-zinc-300 border-zinc-700';
+            }
+        }
+
+        // Setup Charts and Analysis Table Data
+        function updateChartsAndAnalysis() {
+            const basePrice = Number(document.getElementById('basePrice').value) || 0;
+            const unitCost = Number(document.getElementById('unitCost').value) || 0;
+
+            // Arrays for Charts
+            const labels = [];
+            const dataVolTanpa = [], dataVolDengan = [];
+            const dataRevTanpa = [], dataRevDengan = [];
+            const dataProfTanpa = [], dataProfDengan = [];
+
+            // Base Tier References (0%)
+            let refVolBase = 0;
+            respondents.forEach(r => { refVolBase += scenarioData[r][0].tanpa; });
+            const refRevBase = basePrice * refVolBase;
+            const refProfBase = refRevBase - (unitCost * refVolBase);
+
+            let tableHtml = '';
+
+            tiers.forEach(tier => {
+                const currentPrice = basePrice * (1 + tier/100);
+                let aggTanpa = 0, aggDengan = 0;
+
+                respondents.forEach(r => {
+                    aggTanpa += scenarioData[r][tier].tanpa;
+                    aggDengan += scenarioData[r][tier].dengan;
+                });
+
+                // Compute Finances
+                const revTanpa = currentPrice * aggTanpa;
+                const revDengan = currentPrice * aggDengan;
+                
+                const profTanpa = revTanpa - (unitCost * aggTanpa);
+                const profDengan = revDengan - (unitCost * aggDengan);
+
+                // Populate Chart Arrays
+                const labelStr = tier === 0 ? `0% (${formatNumber(currentPrice)})` : `${tier > 0 ? '+' : ''}${tier}% (${formatNumber(currentPrice)})`;
+                labels.push(labelStr);
+                
+                dataVolTanpa.push(aggTanpa); dataVolDengan.push(aggDengan);
+                dataRevTanpa.push(revTanpa); dataRevDengan.push(revDengan);
+                dataProfTanpa.push(profTanpa); dataProfDengan.push(profDengan);
+
+                // Build Table Rows (Skip Base 0% tier per standard delta display)
+                if (tier !== 0) {
+                    const deltaVolTanpa = ((aggTanpa - refVolBase) / refVolBase) * 100;
+                    const deltaRevTanpa = ((revTanpa - refRevBase) / refRevBase) * 100;
+                    const deltaProfTanpa = ((profTanpa - refProfBase) / refProfBase) * 100;
+
+                    const deltaVolDengan = ((aggDengan - refVolBase) / refVolBase) * 100;
+                    const deltaRevDengan = ((revDengan - refRevBase) / refRevBase) * 100;
+                    const deltaProfDengan = ((profDengan - refProfBase) / refProfBase) * 100;
+
+                    tableHtml += `
+                        <tr class="border-b border-zinc-800/50 hover:bg-white/[0.02] transition-colors">
+                            <td class="py-4 px-4 text-sm font-semibold text-zinc-300 border-r border-zinc-800">${tier > 0 ? '+' : ''}${tier}%</td>
+                            <td class="py-4 px-2 border-r border-zinc-800 bg-emerald-500/[0.02]">${getDeltaHtml(deltaVolTanpa)}</td>
+                            <td class="py-4 px-2 border-r border-zinc-800 bg-emerald-500/[0.02]">${getDeltaHtml(deltaRevTanpa)}</td>
+                            <td class="py-4 px-2 border-r border-zinc-800 bg-emerald-500/[0.02]">${getDeltaHtml(deltaProfTanpa)}</td>
+                            <td class="py-4 px-2 border-r border-zinc-800 bg-blue-500/[0.02]">${getDeltaHtml(deltaVolDengan)}</td>
+                            <td class="py-4 px-2 border-r border-zinc-800 bg-blue-500/[0.02]">${getDeltaHtml(deltaRevDengan)}</td>
+                            <td class="py-4 px-2 bg-blue-500/[0.02]">${getDeltaHtml(deltaProfDengan)}</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            document.getElementById('analysisTableBody').innerHTML = tableHtml;
+
+            // Chart Configuration Factory
+            const getChartConfig = (type, labels, ds1, ds2, yAxisCallback) => {
+                return {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Tanpa Reaksi Kompetitor',
+                                data: ds1,
+                                borderColor: '#34d399', // Emerald 400
+                                backgroundColor: 'rgba(52, 211, 153, 0.1)',
+                                pointBackgroundColor: '#09090b',
+                                pointBorderColor: '#34d399',
+                                pointBorderWidth: 2,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                fill: true,
+                                tension: 0.3
+                            },
+                            {
+                                label: 'Dengan Reaksi Kompetitor',
+                                data: ds2,
+                                borderColor: '#60a5fa', // Blue 400
+                                backgroundColor: 'transparent',
+                                borderDash: [5, 5],
+                                pointBackgroundColor: '#09090b',
+                                pointBorderColor: '#60a5fa',
+                                pointBorderWidth: 2,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                fill: false,
+                                tension: 0.3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: '#a1a1aa', usePointStyle: true, boxWidth: 8, font: { family: 'Inter', size: 12 } }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(24, 24, 27, 0.9)',
+                                titleColor: '#fff',
+                                bodyColor: '#e4e4e7',
+                                borderColor: 'rgba(255,255,255,0.1)',
+                                borderWidth: 1,
+                                padding: 12,
+                                boxPadding: 6,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        if (context.parsed.y !== null) {
+                                            label += (type === 'vol') 
+                                                ? formatNumber(context.parsed.y) 
+                                                : formatCurrency(context.parsed.y);
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+                                ticks: { color: '#71717a', font: { family: 'Inter', size: 10 }, maxRotation: 45, minRotation: 45 }
+                            },
+                            y: {
+                                grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+                                ticks: {
+                                    color: '#71717a', font: { family: 'Inter', size: 11 },
+                                    callback: function(value) {
+                                        if (type === 'vol') return formatNumber(value);
+                                        // Auto format to Millions/Billions for clean chart axes
+                                        if (value >= 1000000000) return 'Rp ' + (value / 1000000000).toFixed(1) + ' Miliar';
+                                        if (value >= 1000000) return 'Rp ' + (value / 1000000).toFixed(1) + ' Juta';
+                                        return 'Rp ' + formatNumber(value);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+            };
+
+            // Render Charts
+            if (chartVolInstance) chartVolInstance.destroy();
+            chartVolInstance = new Chart(document.getElementById('chartVolume'), getChartConfig('vol', labels, dataVolTanpa, dataVolDengan));
+
+            if (chartRevInstance) chartRevInstance.destroy();
+            chartRevInstance = new Chart(document.getElementById('chartRevenue'), getChartConfig('curr', labels, dataRevTanpa, dataRevDengan));
+
+            if (chartProfInstance) chartProfInstance.destroy();
+            chartProfInstance = new Chart(document.getElementById('chartProfit'), getChartConfig('curr', labels, dataProfTanpa, dataProfDengan));
+        }
+
+        function calculateSimulator() {
+            const basePrice = Number(document.getElementById('basePrice').value) || 0;
+            const unitCost = Number(document.getElementById('unitCost').value) || 0;
+            
+            let baseVolumeAgregat = 0;
+            respondents.forEach(r => { baseVolumeAgregat += scenarioData[r][0].tanpa; }); 
+
+            const priceChangePct = Number(document.getElementById('priceChangePct').value) || 0;
+            const volumeChangePct = Number(document.getElementById('volumeChangePct').value) || 0;
+
+            const baseRevenue = basePrice * baseVolumeAgregat;
+            const baseCogs = unitCost * baseVolumeAgregat;
+            const baseProfit = baseRevenue - baseCogs;
+
+            const baseMarginDecimal = baseRevenue > 0 ? (baseProfit / baseRevenue) : 0;
+            const baseMarginPct = baseMarginDecimal * 100;
+            document.getElementById('infoCogsHa').innerText = formatCurrency(unitCost);
+            document.getElementById('infoGpMargin').innerText = `${baseMarginDecimal.toFixed(2).replace('.', ',')} (${Math.round(baseMarginPct)}%)`;
+
+            const newPrice = basePrice * (1 + priceChangePct / 100);
+            const newVolume = Math.round(baseVolumeAgregat * (1 + volumeChangePct / 100));
+            const newRevenue = newPrice * newVolume;
+            const newCogs = unitCost * newVolume;
+            const newProfit = newRevenue - newCogs;
+            
+            const newMargin = newRevenue > 0 ? (newProfit / newRevenue) * 100 : 0;
+            const profitImpact = newProfit - baseProfit;
+            const revenueImpact = newRevenue - baseRevenue;
+            const cogsImpact = newCogs - baseCogs;
+
+            document.getElementById('priceChangeBadge').innerText = formatPct(priceChangePct);
+            updateBadgeStyle(document.getElementById('priceChangeBadge'), priceChangePct);
+            
+            document.getElementById('volumeChangeBadge').innerText = formatPct(volumeChangePct);
+            updateBadgeStyle(document.getElementById('volumeChangeBadge'), volumeChangePct);
+
+            const banner = document.getElementById('impactBanner');
+            const impactText = document.getElementById('profitImpactText');
+            impactText.innerText = (profitImpact > 0 ? '+' : '') + formatCurrency(profitImpact);
+            
+            if (profitImpact > 0) {
+                banner.className = 'p-6 md:p-8 rounded-3xl border relative overflow-hidden transition-colors duration-500 bg-emerald-950/20 border-emerald-900/50 shadow-[0_0_30px_rgba(16,185,129,0.05)]';
+                impactText.className = 'text-4xl md:text-5xl font-bold tracking-tight text-emerald-400';
+            } else if (profitImpact < 0) {
+                banner.className = 'p-6 md:p-8 rounded-3xl border relative overflow-hidden transition-colors duration-500 bg-rose-950/20 border-rose-900/50 shadow-[0_0_30px_rgba(244,63,94,0.05)]';
+                impactText.className = 'text-4xl md:text-5xl font-bold tracking-tight text-rose-400';
+            } else {
+                banner.className = 'p-6 md:p-8 rounded-3xl border relative overflow-hidden transition-colors duration-500 bg-zinc-900/50 border-zinc-800/80';
+                impactText.className = 'text-4xl md:text-5xl font-bold tracking-tight text-zinc-300';
+            }
+
+            document.getElementById('newProfitTextBanner').innerText = formatCurrency(newProfit);
+            document.getElementById('newMarginText').innerText = newMargin.toFixed(1) + '%';
+
+            document.getElementById('baseRevText').innerText = formatCurrency(baseRevenue);
+            document.getElementById('newRevText').innerText = formatCurrency(newRevenue);
+            document.getElementById('revImpactText').innerText = formatCurrency(Math.abs(revenueImpact));
+            updateBadgeStyle(document.getElementById('revImpactBadge'), revenueImpact);
+            
+            document.getElementById('baseCogsText').innerText = formatCurrency(baseCogs);
+            document.getElementById('newCogsText').innerText = formatCurrency(newCogs);
+            document.getElementById('cogsImpactText').innerText = formatCurrency(Math.abs(cogsImpact));
+            updateBadgeStyle(document.getElementById('cogsImpactBadge'), cogsImpact, true); 
+
+            // Trigger Update for Charts and Table Analysis
+            updateChartsAndAnalysis();
+        }
+
+        // Event Listeners for Base Inputs & Sliders
+        ['basePrice', 'unitCost'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                renderTable(); 
+                calculateSimulator();
+            });
+        });
+
+        ['priceChangePct', 'volumeChangePct'].forEach(id => {
+            document.getElementById(id).addEventListener('input', calculateSimulator);
+        });
+
+        // Initialize App
+        initData();
+        renderTabs();
+        renderTable();
+        calculateSimulator();
+
+    </script>
+</body>
+</html>
